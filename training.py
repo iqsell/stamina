@@ -38,7 +38,12 @@ class Ui_MainWindow(object):
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.label_dif = QtWidgets.QLabel(self.centralwidget)
         self.label_dif.setObjectName("label_dif")
+        self.label_symb = QtWidgets.QLabel(self.centralwidget)
+        self.label_symb.setObjectName("label_symb")
+        self.label_dif = QtWidgets.QLabel(self.centralwidget)
+        self.label_dif.setObjectName("label_dif")
         self.horizontalLayout.addWidget(self.label_dif)
+
         self.label_time = QtWidgets.QLabel(self.centralwidget)
         self.label_time.setObjectName("label_time")
         self.horizontalLayout.addWidget(self.label_time)
@@ -323,11 +328,12 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
-        self.label_dif.setText(_translate("MainWindow", "Сложность: Сложно"))
-        self.label_time.setText(_translate("MainWindow", "Время: 00:00"))
-        self.label_record.setText(_translate("MainWindow", "Рекорд: 03:44"))
+
+        self.label_record.setText(_translate("MainWindow", "Время: "))
+
         self.pushButton_start.setText(_translate("MainWindow", "Старт"))
         self.pushButton_back.setText(_translate("MainWindow", "Вернуться"))
+        self.label.setText(_translate('MainWindow', ''))
         self.label.setText(_translate("MainWindow", "Тут будет текст"))
         self.pushButton_78.setText(_translate("MainWindow", "Т"))
         self.pushButton_74.setText(_translate("MainWindow", "О"))

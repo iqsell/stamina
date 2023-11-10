@@ -1,7 +1,7 @@
 import datetime
 import sqlite3
 import time
-
+import os
 from PyQt5.QtCore import Qt, QCoreApplication, QTimer
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QDialog, \
@@ -44,6 +44,8 @@ class LoginWindow(QDialog):
     def login(self):
         db = QSqlDatabase.addDatabase('QSQLITE')
         db.setDatabaseName('users.db')
+        username = self.username.text()
+        password = self.password.text()
 
         if db.open():
             query = QSqlQuery()
@@ -51,7 +53,10 @@ class LoginWindow(QDialog):
             query.addBindValue(self.username.text())
             query.addBindValue(self.password.text())
             query.exec_()
-
+            with open("stamina.cfg", "w") as file:
+                file.write("")
+                file.write(f"{username}\n")
+                file.write(f"{password}\n")
             if query.next():
                 QMessageBox.information(self, 'Успех',
                                         'Вы успешно вошли в систему!')  # Выводим сообщение об успешной авторизации
@@ -203,8 +208,10 @@ class MainWindow(QWidget):
         self.setLayout(layout)
 
     def open_profile_window(self):
+        with open('stamina.cfg') as f:
+            lines = f.readlines()
         # Здесь вы должны получить имя текущего пользователя из базы данных или другого источника
-        username = current_user
+        username = lines[0]
         self.profile_window = ProfileWindow(username,
                                             main_window=self)  # Передаем ссылку на главное окно в ProfileWindow
         self.profile_window.show()
@@ -219,6 +226,10 @@ class MainWindow(QWidget):
             category = 'ru'
         elif button_text == 'Английская раскладка':
             category = 'eng'
+        elif button_text == 'Python':
+            category = 'Python'
+        elif button_text == 'sql':
+            category = 'SQL'
         else:
             category = None
 
@@ -355,6 +366,9 @@ class TrainingWindow(QMainWindow):
         self.ui.pushButton_esc.installEventFilter(self)
         # Создаем виджет QLineEdit
         self.ui.lineEdit = QLineEdit(self)
+        self.total_characters = 0  # общее количество набранных символов
+        self.total_time_seconds = 0  # общее количество времени в секундах
+        self.start_time = 0  # время начала ввода
         # Задаем размер и положение виджета
         self.ui.lineEdit.setGeometry(340, 200, 400, 40)  # Параметры: x, y, width, height
         self.ui.lineEdit.textChanged.connect(self.check_input)
@@ -439,11 +453,11 @@ class TrainingWindow(QMainWindow):
                 # Если слово введено полностью и правильно, отображаем следующее слово
                 self.display_random_word()
 
-        def keyReleaseEvent(self, event):
-            key = event.key()
-            if key in self.key_button_map:
-                # Возвращаем обычный цвет кнопки после отпускания клавиши
-                self.key_button_map[key].setStyleSheet("background: #666")
+    def keyReleaseEvent(self, event):
+        key = event.key()
+        if key in self.key_button_map:
+            # Возвращаем обычный цвет кнопки после отпускания клавиши
+            self.key_button_map[key].setStyleSheet("background: #666")
 
     def returntowindow(self):
         self.mainwindow = MainWindow()
@@ -483,26 +497,58 @@ class TrainingWindow(QMainWindow):
 
     def update_timer(self):
         self.elapsed_time += 1  # Увеличиваем счетчик времени
-        self.ui.label_time.setText(str(datetime.timedelta(seconds=self.elapsed_time)))
+        self.ui.label_record.setText(str(datetime.timedelta(seconds=self.elapsed_time)))
 
     def check_input(self, text):
-        # Получаем текущее слово
         current_word = self.ui.label.text()
 
-        # Проверяем, правильно ли введено слово
+        if not self.start_time:  # Проверяем, если start_time равен None (т.е. первое слово)
+            self.start_time = time.time()  # Запоминаем время начала первого слова
+
+        # Проверяем, произошло ли удаление символов
+        if len(text) < len(current_word):
+            # Не выполняем сброс счетчика
+            self.total_characters = len(text)
+        else:
+            # Обновляем общее количество набранных символов
+            self.total_characters = len(text)
+
+            elapsed_time = time.time() - self.start_time  # Вычисляем прошедшее время с начала ввода текущего слова в секундах
+            elapsed_time_minutes = elapsed_time / 60  # Пересчитываем в минуты
+
+            characters_per_minute = (self.total_characters) / elapsed_time_minutes  # Рассчитываем CPM
+            self.ui.label_dif.setText(f'Всего знаков: {self.total_characters}')
+            self.ui.label_dif.setText(f'Знаков в минуту: {characters_per_minute:.2f}')
+
         if text == current_word:
-            # Если слово введено правильно, отображаем следующее слово и очищаем поле ввода
             self.display_random_word()
             self.ui.lineEdit.clear()
+            self.starttime = time.time()  # Сбрасываем starttime для отслеживания времени начала следующего слова
         elif len(text) <= len(current_word) and text != current_word[:len(text)]:
-            # Если введена неправильная буква, подсвечиваем поле ввода красным
             self.ui.lineEdit.setStyleSheet("background: #f00")
         else:
-            # Если все буквы введены правильно, возвращаем обычный цвет поля ввода
             self.ui.lineEdit.setStyleSheet("background: #fff")
 
 
 app = QApplication([])
-window = MainWindow()
+if os.path.exists("stamina.cfg"):
+    with open("stamina.cfg", "r") as file:
+        lines = file.read().split('\n')
+        if len(lines) >= 2:
+            username = lines[0]
+            password = lines[1]
+            if LoginWindow.login:
+                window = MainWindow()
+            else:
+                with open("stamina.cfg", "w") as file:
+                    file.write("")
+        else:
+            with open("stamina.cfg", "w") as file:
+                file.write("")
+            window = Reg_Window()
+else:
+    with open("stamina.cfg", "w") as file:
+        file.write("")
+    window = Reg_Window()
 window.show()
 app.exec_()
