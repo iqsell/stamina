@@ -1,4 +1,3 @@
-
 from main_window import MainWindow
 from training_window import TrainingWindow
 import datetime
@@ -8,14 +7,17 @@ import os
 
 from PyQt5.QtCore import Qt, QCoreApplication, QTimer
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QDialog, \
-    QLineEdit, QMessageBox, QSpacerItem, QSizePolicy
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QHBoxLayout,
+                             QWidget, QDialog, QLineEdit, QMessageBox, QSpacerItem, QSizePolicy)
 
 from profile_window import ProfileWindow
+
+
 class LoginWindow(QDialog):
     def __init__(self, reg_window=None):
         super(LoginWindow, self).__init__()
 
+        self.main_window = None
         self.reg_window = reg_window
 
         self.setWindowTitle("Вход")
@@ -55,10 +57,8 @@ class LoginWindow(QDialog):
             query.addBindValue(self.username.text())
             query.addBindValue(self.password.text())
             query.exec_()
-            with open("stamina.cfg", "w") as file:
-                file.write("")
-                file.write(f"{username}\n")
-                file.write(f"{password}\n")
+            with open("stamina.cfg", "w") as f:
+                f.write(f"{username}\n{password}\n")
             if query.next():
                 QMessageBox.information(self, 'Успех',
                                         'Вы успешно вошли в систему!')  # Выводим сообщение об успешной авторизации
@@ -184,29 +184,24 @@ class Reg_Window(QWidget):
         self.close()
 
 
-
-
-
-
-
 app = QApplication([])
 if os.path.exists("stamina.cfg"):
-    with open("stamina.cfg", "r") as file:
-        lines = file.read().split('\n')
+    with open("stamina.cfg", "r") as f4:
+        lines = f4.read().split('\n')
         if len(lines) >= 2:
             username = lines[0]
             password = lines[1]
             if LoginWindow.login:
                 window = MainWindow()
             else:
-                with open("stamina.cfg", "w") as file:
-                    file.write("")
+                with open("stamina.cfg", "w") as f1:
+                    f1.write("")
         else:
-            with open("stamina.cfg", "w") as file:
-                file.write("")
+            with open("stamina.cfg", "w") as f2:
+                f2.write("")
             window = Reg_Window()
 else:
-    with open("stamina.cfg", "w") as file:
+    with open("stamina.cfg", "w") as f3:
         file.write("")
     window = Reg_Window()
 window.show()

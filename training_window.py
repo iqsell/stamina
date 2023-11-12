@@ -4,14 +4,18 @@ import time
 import os
 from PyQt5.QtCore import Qt, QCoreApplication, QTimer
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QDialog, \
-    QLineEdit, QMessageBox, QSpacerItem, QSizePolicy
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QWidget, \
+    QDialog, QLineEdit, QMessageBox, QSpacerItem, QSizePolicy
+
 
 class TrainingWindow(QMainWindow):
     def __init__(self, category=None):
         super().__init__()
+        self.mainwindow = None
+        self.main_window = None
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.characters_per_minute = 0
         self.category = category  # Сохраняем выбранную категорию
         self.timer = QTimer()  # Создаем объект QTimer
         self.timer.timeout.connect(self.update_timer)  # Подключаем сигнал timeout к слоту self.update_timer
@@ -94,6 +98,8 @@ class TrainingWindow(QMainWindow):
         from main_window import MainWindow  # Импортируйте класс MainWindow здесь, в функции
         self.main_window = MainWindow()  # Создание экземпляра класса MainWindow
         self.main_window.show()
+        self.close()
+
     def keyPressEvent(self, event):
         key = event.key()
         if key in self.key_button_map:
@@ -101,7 +107,8 @@ class TrainingWindow(QMainWindow):
 
             # Получаем текущее слово и введенный текст
             current_word = self.ui.label.text()
-            entered_text = self.ui.lineEdit.text()  # Предполагается, что у вас есть QLineEdit с именем lineEdit для ввода текста
+            entered_text = self.ui.lineEdit.text()
+            # Предполагается, что у вас есть QLineEdit с именем lineEdit для ввода текста
 
             # Проверяем, правильно ли введена буква
             if len(entered_text) <= len(current_word) and entered_text[-1] != current_word[len(entered_text) - 1]:
@@ -122,6 +129,7 @@ class TrainingWindow(QMainWindow):
         self.mainwindow = MainWindow()  # Создание экземпляра класса MainWindow
         self.mainwindow.show()
         self.hide()
+
     def start(self):
         self.ui.pushButton_start.setStyleSheet('background-color: orange')
         for i in range(3):
@@ -133,6 +141,8 @@ class TrainingWindow(QMainWindow):
         self.ui.pushButton_start.setText(f'Заново')
         self.repaint()
         self.elapsed_time = 0  # Сбрасываем счетчик времени
+        self.total_symbols = 0
+        self.characters_per_minute = 0
         self.timer.start(1000)  # Запускаем таймер
         self.display_random_word()  # Отображаем случайное слово
 
@@ -151,7 +161,7 @@ class TrainingWindow(QMainWindow):
         # Закрываем соединение с базой данных
         conn.close()
 
-    # Запускаем таймер
+        # Запускаем таймер
 
     def update_timer(self):
         self.elapsed_time += 1  # Увеличиваем счетчик времени
@@ -164,6 +174,7 @@ class TrainingWindow(QMainWindow):
             self.start_time = time.time()  # Запоминаем время начала первого слова
 
         # Проверяем, произошло ли удаление символов
+
         if len(text) < len(current_word):
             # Не выполняем сброс счетчика
             self.total_characters = len(text)
@@ -171,12 +182,12 @@ class TrainingWindow(QMainWindow):
             # Обновляем общее количество набранных символов
             self.total_characters = len(text)
             self.total_symbols += self.total_characters
-
-            elapsed_time = time.time() - self.start_time  # Вычисляем прошедшее время с начала ввода текущего слова в секундах
+            # Вычисляем прошедшее время с начала ввода текущего слова в секундах
+            elapsed_time = time.time() - self.start_time
             elapsed_time_minutes = elapsed_time / 60  # Пересчитываем в минуты
-            characters_per_minute = (self.total_characters) / elapsed_time_minutes  # Рассчитываем CPM
+            self.characters_per_minute = (self.total_characters) / elapsed_time_minutes  # Рассчитываем CPM
             self.ui.label_symb.setText(f'Всего знаков: {self.total_symbols}')
-            self.ui.label_dif.setText(f'Знаков в минуту: {characters_per_minute:.2f}')
+            self.ui.label_dif.setText(f'Знаков в минуту: {self.characters_per_minute:.2f}')
 
         if text == current_word:
             self.display_random_word()
@@ -206,20 +217,20 @@ class Ui_MainWindow(object):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1028, 600)
         MainWindow.setStyleSheet("QWidget {\n"
-"    color: black;\n"
-"    background-color: white;\n"
-"    width: 50px;\n"
-"    height: 50px;\n"
-"}\n"
-"\n"
-"QPushButton {\n"
-"    background-color: #666;\n"
-"    border: none;\n"
-"}\n"
-"\n"
-"QPushButton:pressed {\n"
-"    background-color:  #888;\n"
-"}")
+                                 "    color: black;\n"
+                                 "    background-color: white;\n"
+                                 "    width: 50px;\n"
+                                 "    height: 50px;\n"
+                                 "}\n"
+                                 "\n"
+                                 "QPushButton {\n"
+                                 "    background-color: #666;\n"
+                                 "    border: none;\n"
+                                 "}\n"
+                                 "\n"
+                                 "QPushButton:pressed {\n"
+                                 "    background-color:  #888;\n"
+                                 "}")
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)
@@ -244,39 +255,39 @@ class Ui_MainWindow(object):
         self.horizontalLayout.addWidget(self.label_record)
         self.pushButton_start = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton_start.setStyleSheet("QWidget {\n"
-"    color: white;\n"
-"    background-color: white;\n"
-"    width: 50px;\n"
-"    height: 50px;\n"
-"}\n"
-"\n"
-"QPushButton {\n"
-"    background-color: green;\n"
-"    border: none;\n"
-"}\n"
-"\n"
-"QPushButton:pressed {\n"
-"    background-color:  #888;\n"
-"}")
+                                            "    color: white;\n"
+                                            "    background-color: white;\n"
+                                            "    width: 50px;\n"
+                                            "    height: 50px;\n"
+                                            "}\n"
+                                            "\n"
+                                            "QPushButton {\n"
+                                            "    background-color: green;\n"
+                                            "    border: none;\n"
+                                            "}\n"
+                                            "\n"
+                                            "QPushButton:pressed {\n"
+                                            "    background-color:  #888;\n"
+                                            "}")
         self.pushButton_start.setObjectName("pushButton_start")
         self.horizontalLayout.addWidget(self.pushButton_start)
         self.pushButton_back = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton_back.setStyleSheet("QWidget {\n"
-"    color: black;\n"
-"    background-color: white;\n"
-"    width: 50px;\n"
-"    height: 50px;\n"
-"}\n"
-"\n"
-"QPushButton {\n"
-"    background-color: rgb(176, 176, 176) ;\n"
-"    color: white;\n"
-"    border: none;\n"
-"}\n"
-"\n"
-"QPushButton:pressed {\n"
-"    background-color:  #888;\n"
-"}")
+                                           "    color: black;\n"
+                                           "    background-color: white;\n"
+                                           "    width: 50px;\n"
+                                           "    height: 50px;\n"
+                                           "}\n"
+                                           "\n"
+                                           "QPushButton {\n"
+                                           "    background-color: rgb(176, 176, 176) ;\n"
+                                           "    color: white;\n"
+                                           "    border: none;\n"
+                                           "}\n"
+                                           "\n"
+                                           "QPushButton:pressed {\n"
+                                           "    background-color:  #888;\n"
+                                           "}")
         self.pushButton_back.setObjectName("pushButton_back")
         self.horizontalLayout.addWidget(self.pushButton_back)
         self.verticalLayout.addLayout(self.horizontalLayout)

@@ -4,14 +4,18 @@ import time
 import os
 from PyQt5.QtCore import Qt, QCoreApplication, QTimer
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QDialog, \
-    QLineEdit, QMessageBox, QSpacerItem, QSizePolicy
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QWidget,
+                             QDialog, QLineEdit, QMessageBox, QSpacerItem, QSizePolicy)
 from training_window import TrainingWindow
 from profile_window import ProfileWindow
+
+
 class MainWindow(QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
 
+        self.profile_window = None
+        self.training_window = None
         self.setWindowTitle("Главное окно")
         self.setFixedSize(1000, 700)
 
@@ -45,9 +49,6 @@ class MainWindow(QWidget):
 
         self.setLayout(layout)
 
-    def open_training_window(self, category):
-        self.training_window = TrainingWindow(category)  # Создание экземпляра класса TrainingWindow
-        self.training_window.show()
     def open_profile_window(self):
         with open('stamina.cfg') as f:
             lines = f.readlines()
@@ -63,16 +64,8 @@ class MainWindow(QWidget):
         button_text = self.sender().text()
 
         # Определяем категорию в зависимости от текста кнопки
-        if button_text == 'Русская раскладка':
-            category = 'ru'
-        elif button_text == 'Английская раскладка':
-            category = 'eng'
-        elif button_text == 'Python':
-            category = 'Python'
-        elif button_text == 'sql':
-            category = 'SQL'
-        else:
-            category = None
+        category_dict = {'Русская раскладка': 'ru', 'Английская раскладка': 'eng', 'Python': 'Python', 'SQL': 'SQL'}
+        category = category_dict.get(button_text, None)
 
         self.training_window = TrainingWindow(category)
         self.training_window.show()

@@ -4,12 +4,14 @@ import time
 import os
 from PyQt5.QtCore import Qt, QCoreApplication, QTimer
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QDialog, \
-    QLineEdit, QMessageBox, QSpacerItem, QSizePolicy
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QWidget,
+                             QDialog, QLineEdit, QMessageBox, QSpacerItem, QSizePolicy)
+
 
 class ProfileWindow(QWidget):
     def __init__(self, username, main_window=None):
         super(ProfileWindow, self).__init__()
+        self.change_password_window = ChangePasswordWindow()
         self.username = username
         self.main_window = main_window
 
@@ -17,29 +19,6 @@ class ProfileWindow(QWidget):
         self.setFixedSize(400, 400)
 
         layout = QVBoxLayout()
-
-        # Получаем данные пользователя из базы данных
-        db = QSqlDatabase.addDatabase('QSQLITE')
-        db.setDatabaseName('users.db')
-
-        if db.open():
-            query = QSqlQuery()
-            query.prepare("SELECT name, registration_date FROM users WHERE name = ?")
-            query.addBindValue(self.username)
-            query.exec_()
-
-            if query.next():
-                name = query.value(0)
-                registration_date = query.value(1)
-
-                # Создаем метки для отображения имени пользователя и даты регистрации
-                name_label = QLabel('Ваше имя: ' + name)
-                date_label = QLabel('Дата регистрации: ' + registration_date)
-
-                layout.addWidget(name_label)
-                layout.addWidget(date_label)
-
-            db.close()
 
         # Создаем кнопку для смены пароля
         change_password_button = QPushButton('Сменить пароль')
@@ -57,7 +36,6 @@ class ProfileWindow(QWidget):
 
     def open_change_password_window(self):
         # Создаем экземпляр ChangePasswordWindow
-        self.change_password_window = ChangePasswordWindow()
         self.change_password_window.exec_()
 
     def go_back(self):
@@ -74,6 +52,7 @@ class ChangePasswordWindow(QDialog):
 
         layout = QVBoxLayout()
 
+        # Создание полей ввода для текущего и нового пароля
         self.currentpassword = QLineEdit()
         self.currentpassword.setEchoMode(QLineEdit.Password)
         self.currentpassword.setPlaceholderText('Текущий пароль')
@@ -82,55 +61,76 @@ class ChangePasswordWindow(QDialog):
         self.newpassword.setEchoMode(QLineEdit.Password)
         self.newpassword.setPlaceholderText('Новый пароль')
 
+        # Создание кнопки обновления пароля
         updatebutton = QPushButton('Обновить')
         updatebutton.clicked.connect(self.updatepassword)
 
+        # Добавление полей ввода и кнопки на форму
         layout.addWidget(self.currentpassword)
         layout.addWidget(self.newpassword)
         layout.addWidget(updatebutton)
 
         self.setLayout(layout)
 
+        # Подключение к базе данных
         self.db = QSqlDatabase.addDatabase('QSQLITE')
         self.db.setDatabaseName('users.db')
         if not self.db.open():
-            QMessageBox.critical(None, 'Ошибка', 'Невозможно открыть базу данных: {}'.format(self.db.lastError().text()))
+            QMessageBox.critical(None, 'Ошибка',
+                                 'Невозможно открыть базу данных: {}'.format(self.db.lastError().text()))
 
     def updatepassword(self):
+        # Проверка подключения к базе данных
         if not self.db.isOpen():
             QMessageBox.critical(None, 'Ошибка', 'Нет подключения к базе данных')
             return
 
         query = QSqlQuery()
-        with open('stamina.cfg', 'r') as file:
-            config_username = file.readline().strip()
-            config_password = file.readline().strip()
+        # Чтение конфигурации из файла
+        config_username, config_password = self.read_config()
 
+        # Подготовка запроса для получения текущего пароля пользователя
         query.prepare("SELECT password FROM users WHERE name = ?")
         query.addBindValue(config_username)
         if not query.exec():
             QMessageBox.critical(None, 'Ошибка', 'Ошибка при выполнении запроса: {}'.format(query.lastError().text()))
             return
 
-        if query.next() and query.value(0) == config_password:
-            if query.value(0) == config_password:
-                new_query = QSqlQuery()
-                new_query.prepare("UPDATE users SET password = ? WHERE name = ?")
-                new_query.addBindValue(self.newpassword.text())
-                new_query.addBindValue(config_username)
-                if not new_query.exec():
-                    QMessageBox.critical(None, 'Ошибка',
-                                         'Ошибка при обновлении пароля: {}'.format(new_query.lastError().text()))
-                else:
-                    new_password = self.newpassword.text()
-                    file_content = f"{config_username}\n{new_password}"
-                    with open('stamina.cfg', 'w') as file:
-                        file.write(file_content)
-                    QMessageBox.information(self, 'Успех', 'Пароль успешно изменен!')
-            else:
-                QMessageBox.warning(self, 'Ошибка', 'Неверный текущий пароль')
+        # Если текущий пароль совпадает, обновляем пароль
+        if query.next() and query.value(0) == self.currentpassword.text():
+            self.update_user_password(config_username)
         else:
             QMessageBox.warning(self, 'Ошибка', 'Неверный текущий пароль')
 
+    @staticmethod
+    def read_config():
+        # Функция для чтения конфигурации из файла
+        with open('stamina.cfg', 'r') as file:
+            config_username = file.readline().strip()
+            config_password = file.readline().strip()
+        return config_username, config_password
+
+    def update_user_password(self, config_username):
+        # Функция для обновления пароля пользователя в базе данных
+        new_query = QSqlQuery()
+        new_query.prepare("UPDATE users SET password = ? WHERE name = ?")
+        new_query.addBindValue(self.newpassword.text())
+        new_query.addBindValue(config_username)
+        if not new_query.exec():
+            QMessageBox.critical(None, 'Ошибка',
+                                 'Ошибка при обновлении пароля: {}'.format(new_query.lastError().text()))
+        else:
+            # Обновление конфигурации в файле
+            self.update_config(config_username)
+            QMessageBox.information(self, 'Успех', 'Пароль успешно изменен!')
+
+    def update_config(self, config_username):
+        # Функция для обновления конфигурации в файле
+        new_password = self.newpassword.text()
+        file_content = f"{config_username}\n{new_password}"
+        with open('stamina.cfg', 'w') as file:
+            file.write(file_content)
+
     def closeEvent(self, event):
+        # Закрытие подключения к базе данных при закрытии окна
         self.db.close()
